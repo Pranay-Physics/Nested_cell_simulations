@@ -1,3 +1,4 @@
+#importing necessary libraries
 import numpy as np
 import matplotlib.pyplot as plt 
 from scipy.optimize import fsolve
@@ -8,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+#defining the L ABCD matrix for a given focal length
 def L_matrix_4x4(f):
     """
     Returns the 4x4 lens matrix for focal length f, acting on [x, x', y, y'].
@@ -19,6 +21,7 @@ def L_matrix_4x4(f):
     ])
     return L_4x4
 
+#defining the S ABCD matrix for a given mirror seperation
 def S_matrix_4x4(d):
     """
     Returns the 4x4 space (propagation) matrix for distance d, acting on [x, x', y, y'].
@@ -30,6 +33,7 @@ def S_matrix_4x4(d):
     ])
     return S_4x4
 
+#numerical solver that returns B/A and alpha for a given R1, R2, d, n
 def solve_system(d, R2, n, R1):
     """
     Solve the system of trigonometric equations for alpha and B/A
@@ -86,17 +90,19 @@ def solve_system(d, R2, n, R1):
     
     return None
 
-
+#defining physical parameters
+n = 3
 R1 = 4000
 R2 = 3355
 hole_dist = 43.588
 wavelength = 5.32e-4
-w0 = 2.1 
+s0 = 2.1 #size of beam when it enters hole
 f1 = R1/2
 f2 = R2/2 
-d = 535.89  # Initial d value
+d = 535.9  # Initial d value
 num_points = 366  # Initial number of points
 
+#defining a class to simulate and update spot pattern
 class OpticalSimulationApp:
     def __init__(self, master):
         self.master = master
@@ -106,10 +112,10 @@ class OpticalSimulationApp:
         control_frame = tk.Frame(master)
         control_frame.pack(side=tk.TOP, fill=tk.X)
 
-        # Slider initialization (unchanged)
-        self.d_slider = Scale(control_frame, from_=500, to=650, resolution=0.1,
-                             orient='horizontal', label='d (distance)')
-        self.d_slider.set(d)
+        # Slider initialization 
+        self.d_slider = Scale(control_frame, from_= 530, to=650, resolution=0.1,
+                             orient='horizontal', label='d (distance)')  #can change this if you want to look at a different range
+        self.d_slider.set(d) 
         self.d_slider.pack(fill=tk.X)
 
         self.num_points_slider = Scale(control_frame, from_=0, to=700, resolution=1,
@@ -163,10 +169,10 @@ class OpticalSimulationApp:
 
         # Simulation code (unchanged)
         theta = np.arccos(1 - current_d/current_R1)
-        B_over_A = solve_system(current_d, current_R2, 3, current_R1)[1]
+        B_over_A = solve_system(current_d, current_R2, n, current_R1)[1]
         A = np.sqrt(hole_dist**2/(np.cos(theta/2)**2 + B_over_A**2 * np.sin(theta/2)**2))
         B = B_over_A * A
-        q = 1j * np.pi * w0**2 / wavelength
+        q = 1j * np.pi * s0**2 / wavelength
 
         x0 = A * np.cos(theta/2)
         y0 = B * np.sin(theta/2)
@@ -180,7 +186,7 @@ class OpticalSimulationApp:
         states = np.zeros((4, current_num_points + 1))
         states[:, 0] = [x0, x0_grad, y0, y0_grad]
         spotsize = np.zeros(current_num_points + 1)
-        spotsize[0] = w0
+        spotsize[0] = s0
 
         for i in range(1, current_num_points + 1):
             states[:,i] = S_matrix_4x4(current_d) @ states[:, i-1]
@@ -250,3 +256,6 @@ class OpticalSimulationApp:
 root = tk.Tk()
 app = OpticalSimulationApp(root)
 root.mainloop()
+
+
+
